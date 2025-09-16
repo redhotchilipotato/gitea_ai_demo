@@ -1,0 +1,28 @@
+FROM gitea/act_runner:latest
+
+# Install required tools and dependencies
+RUN apk add --no-cache \
+    curl \
+    jq \
+    git \
+    bash \
+    libgcc \
+    libstdc++ \
+    ripgrep
+
+# Install Claude Code CLI using the official installer
+RUN curl -fsSL https://claude.ai/install.sh | bash
+
+# Set up PATH to include Claude Code installation
+ENV PATH="/root/.local/bin:${PATH}"
+
+# Verify Claude Code installation
+RUN claude --version || echo "Claude Code installed, will be available after authentication"
+
+# Copy custom entrypoint and scripts
+COPY runner-config/entrypoint.sh /entrypoint-custom.sh
+COPY scripts/trigger_review.sh /usr/local/bin/trigger_review.sh
+RUN chmod +x /entrypoint-custom.sh /usr/local/bin/trigger_review.sh && \
+    ln -s /usr/local/bin/trigger_review.sh /usr/bin/trigger_review.sh
+
+ENTRYPOINT ["/entrypoint-custom.sh"]

@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "gitea": {
+      "command": "node",
+      "args": ["-e", "console.log(JSON.stringify({method:'notifications/initialized'}))"],
+      "env": {},
+      "disabled": false,
+      "alwaysAllow": [],
+      "serverSentEvents": {
+        "url": "http://mcp:8080/sse"
+      }
+    }
+  },
+  "globalShortcut": "",
+  "codeEditor": {
+    "enabled": true,
+    "autoSave": true
+  }
+}

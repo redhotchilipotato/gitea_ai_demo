@@ -1,0 +1,66 @@
+name: Claude Code Review
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+  push:
+    branches: [ main, develop ]
+
+jobs:
+  code-review:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Trigger Code Review
+      run: |
+        echo "🔍 Starting Claude Code review..."
+
+        # Determine repository URL and branch
+        REPO_URL="http://gitea:3000/${GITHUB_REPOSITORY}.git"
+        BRANCH="${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}"
+        BASE_BRANCH="${GITHUB_BASE_REF:-main}"
+
+        echo "Repository: $REPO_URL"
+        echo "Branch: $BRANCH"
+        echo "Base Branch: $BASE_BRANCH"
+
+        # Test connectivity first
+        echo "🔍 Testing code review service connectivity..."
+        health_check=$(curl -s -f "http://code-review-service:5000/health" || echo "FAILED")
+        echo "Health check result: $health_check"
+
+        if [[ "$health_check" == "FAILED" ]]; then
+            echo "❌ Cannot reach code review service"
+            exit 1
+        fi
+
+        # Call the code review service directly via HTTP
+        echo "📡 Calling code review service..."
+
+        # Create JSON payload
+        json_payload="{\"repo_url\":\"$REPO_URL\",\"branch\":\"$BRANCH\",\"base_branch\":\"$BASE_BRANCH\"}"
+        echo "Payload: $json_payload"
+
+        # Make the HTTP request with error handling
+        http_code=$(curl -s -w "%{http_code}" -X POST \
+          -H "Content-Type: application/json" \
+          -d "$json_payload" \
+          -o /tmp/response.json \
+          "http://code-review-service:5000/review")
+
+        echo "HTTP Status Code: $http_code"
+
+        # Read response
+        response=$(cat /tmp/response.json 2>/dev/null || echo "No response")
+
+        # Check if request was successful
+        if [ "$http_code" = "200" ]; then
+            echo "✅ Code review completed!"
+            echo ""
+            echo "Response:"
+            echo "$response"
+        else
+            echo "❌ Code review request failed with status $http_code"
+            echo "Response:"
+            echo "$response"
+            exit 1
+        fi
